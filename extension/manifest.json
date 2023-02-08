@@ -1,0 +1,11 @@
+{
+    "name":             "PUN - Page Update Notifier",
+    "version":          "1.0",
+    "description":      "Be notified by e-mail when any page is updated.",
+    "action": {
+        "default_title": "PUN - Page Update Notifier",
+        "default_popup": "popup.html"
+    },
+    "permissions": ["tabs", "activeTab", "scripting", "webRequest", "storage"],
+    "manifest_version": 3
+}
