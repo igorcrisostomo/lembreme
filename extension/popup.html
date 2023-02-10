@@ -1,23 +1,43 @@
 <!DOCTYPE html>
+
 <html>
+	<script language="text/JavaScript" src="newtag.js"></script>
 <head>
 	<meta charset="utf-8">
 	<meta http-equiv="X-UA-Compatible" content="IE=edge">
 	<title>Popup</title>
 	<link rel="stylesheet" href="popup.css">
 </head>
+
+
+
 <body>
+	
+
 	<h5>PUN - Page Update Notifier</h5>
-	Receba notificações de atualizações de suas páginas preferidas.<br />
+	Clique em OK para monitorar essa página.<br />
 	 
-	Página atual:
-	<form action=""><input type="text" name="Nome" size="40" maxlength="100"/> 
+	<form id="form">
+		
 		<div>
-			<input type = "checkbox" id = "subscribeNews" name = "subscribe" value = "newsletter">
-			<label for = "subscribeNews"> Ativar lembrete </label>
+			<input type="hidden" name="variable" id="variable">
+			<input type="submit" value="OK">
 		</div>
-	<button>OK</button>
+
 
 	</form>
+	<script>var url_atual = window.location.href
+		//document.write (url_atual)
+
+		document.getElementById("variable").value = url_atual;
+		document.getElementById("form").action = "func.php";
+		document.getElementById("form").method = "POST";
+		//document.getElementById("form").submit();
+
+
+		</script>
+	
 </body>
+
 </html>
+
