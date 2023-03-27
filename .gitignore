@@ -1,0 +1,2 @@
+# ignorar arquivos do diretório "server/pages_saved" pois são os arquivos do último request das páginas.
+server/pages_saved/
