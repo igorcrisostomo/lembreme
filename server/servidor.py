@@ -9,6 +9,8 @@ import requests
 import io
 import os
 import json
+import webbrowser
+import difflib
 
 import smtplib
 from email.mime.text import MIMEText
@@ -27,40 +29,58 @@ def main():
     with open(serverPath+"/urls.json", encoding='utf-8') as myJson:
         pages = json.load(myJson)
 
+    # Cria uma instância da classe Differ
+    differ = difflib.Differ()
 
     headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36'}
 
     # Percorre o JSON de páginas para verificar uma a uma se houve alteração
     for page in pages:
-        # Faz a requisição HTTP e obtém o conteúdo HTML
-        response = requests.get(page["url"], headers=headers)
+        try:
+            # Faz a requisição HTTP e obtém o conteúdo HTML
+            response = requests.get(page["url"], headers=headers)
 
-        html = response.text
+            html = response.text
 
-        # Cria um objeto BeautifulSoup a partir do conteúdo HTML
-        soup = BeautifulSoup(html, "html.parser")
-        pageContent = soup.select(page["selector"])[0]
+            # Cria um objeto BeautifulSoup a partir do conteúdo HTML
+            soup = BeautifulSoup(html, "html.parser")
+            pageContent = soup.select(page["selector"])[0]
+            pageTitle = soup.select("title")[0]
 
-        # Obtem o conteúdo antigo da página já salva
-        pathFileName = serverPath+'/pages_saved/'+str(page["id"])+'.html'
-        
-        if os.path.exists(pathFileName):
-            # Lê o conteúdo do arquivo salvo
-            with open(pathFileName, 'r', encoding='utf-8') as file:
-                fileContent = file.read()
+            # Obtem o conteúdo antigo da página já salva
+            pathFileName = serverPath+'/pages_saved/'+str(page["id"])+'.html'
+            
+            if os.path.exists(pathFileName):
+                # Lê o conteúdo do arquivo salvo
+                with open(pathFileName, 'r', encoding='utf-8') as file:
+                    fileContent = file.read()
+                file.close()
+
+                if(pageContent.text == fileContent):
+                    print(page["id"],": Igual")
+                else:
+                    print(page["id"],": Atualizada. Título: ", pageTitle.text)
+                    # Compara as duas strings e retorna uma lista das diferenças
+                    differences = list(differ.compare(pageContent.text, fileContent))
+                    print("Detalhes da atualização:")
+                    # Percorre a lista de diferenças e exibe as que começam com "+" (adicionadas) ou "-" (removidas)
+                    textAdded = ""
+                    for line in differences:
+                        # pegar apenas o texto adicionado
+                        if line.startswith("+"):
+                            textAdded += line.strip()[2:]
+                        
+                    print("Texto adicionado: ", textAdded)
+                    webbrowser.open(page["url"])
+
+            # Cria um objeto IO para escrever a resposta em um arquivo .html
+            with io.open(pathFileName, 'w', encoding='utf-8') as file:
+                file.write(pageContent.text)
             file.close()
+        except TimeoutError:
+            gravaLog("Ocorreu um erro de timeout ao tentar requisitar a página ", page['id'])
 
-            if(pageContent.text == fileContent):
-                print(page["id"],": igual")
-            else:
-                print(page["id"],": diferente")
-
-        # Cria um objeto IO para escrever a resposta em um arquivo .html
-        with io.open(pathFileName, 'w', encoding='utf-8') as file:
-            file.write(pageContent.text)
-        file.close()
-
-    sendMail()
+    #sendMail()
 
 def sendMail():
     try:
