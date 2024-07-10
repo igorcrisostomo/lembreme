@@ -1,0 +1,10 @@
+version: '3'
+services:
+  meu_app:
+    build:
+      context: .
+    volumes:
+      - ".:/app"
+    ports:
+      - "8090:8080"
+    command: sh -c 'while true; do python3 servidor.py; sleep 10; done'

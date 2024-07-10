@@ -1,37 +1,28 @@
-# from selenium import webdriver
-# from webdriver_manager.chrome import ChromeDriverManager
-# from selenium.webdriver.chrome.service import Service
-# from selenium.webdriver.common.by import By
-
 from lxml import etree
 from bs4 import BeautifulSoup
 import requests
 import io
 import os
 import json
-import webbrowser
+# import webbrowser # importar apenas se quiser abrir o navegador com o URL
 import difflib
+import time
 
+# Bliblioteca para envio de e-mail
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
 def main():
-    currentPath = os.getcwd()
 
-    # Navega para o diretório raiz do projeto
-    while not os.path.exists(os.path.join(currentPath, 'README.md')):
-        currentPath = os.path.dirname(currentPath)
-
-    serverPath = os.path.abspath(currentPath) + '/server'
-
-    # Abrir o arquivo JSON
-    with open(serverPath+"/urls.json", encoding='utf-8') as myJson:
+    # Carregar de urls.json os dados das páginas
+    with open("./urls.json", encoding='utf-8') as myJson:
         pages = json.load(myJson)
-
-    # Cria uma instância da classe Differ
+    
+    # Cria uma instância da classe Differ para comparar os arquivos
     differ = difflib.Differ()
 
+    # Define cabeçalho das requisições a serem feitas para as páginas
     headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36'}
 
     # Percorre o JSON de páginas para verificar uma a uma se houve alteração
@@ -48,7 +39,7 @@ def main():
             pageTitle = soup.select("title")[0]
 
             # Obtem o conteúdo antigo da página já salva
-            pathFileName = serverPath+'/pages_saved/'+str(page["id"])+'.html'
+            pathFileName = './pages_saved/'+str(page["id"])+'.html'
             
             if os.path.exists(pathFileName):
                 # Lê o conteúdo do arquivo salvo
@@ -56,9 +47,9 @@ def main():
                     fileContent = file.read()
                 file.close()
 
-                if(pageContent.text == fileContent):
-                    print(page["id"],": Igual")
-                else:
+                if(pageContent.text != fileContent):
+                    # print(page["id"],": Igual")
+                # else:
                     print(page["id"],": Atualizada. Título: ", pageTitle.text)
                     # Compara as duas strings e retorna uma lista das diferenças
                     differences = list(differ.compare(pageContent.text, fileContent))
@@ -71,33 +62,51 @@ def main():
                             textAdded += line.strip()[2:]
                         
                     print("Texto adicionado: ", textAdded)
-                    webbrowser.open(page["url"])
+                    # Abre o navegador com a url que sofreu alterações
+                    # webbrowser.open(page["url"])
 
-            # Cria um objeto IO para escrever a resposta em um arquivo .html
-            with io.open(pathFileName, 'w', encoding='utf-8') as file:
-                file.write(pageContent.text)
-            file.close()
+                    body = f"""
+                    <p>ID: {page["id"]}</p>\
+                    <p>Título: {pageTitle.text}</p>\
+                    <p>URL: {page["url"]}</p>\
+                    <p>Texto adicionado/removido: {textAdded}</p>
+                    """
+
+                    sendMail(body)
+
+                    # sobrescreve o arquivo com a atualização
+                    writeFile(pathFileName, pageContent.text)
+            
+            # se o arquivo não existir, então grava
+            else:
+                print("Novo arquivo cadastrado: ", pathFileName)
+                writeFile(pathFileName, pageContent.text)
+
         except TimeoutError:
             gravaLog("Ocorreu um erro de timeout ao tentar requisitar a página ", page['id'])
 
-    #sendMail()
+def writeFile(name, content):
+    # Cria um objeto IO para escrever a resposta em um arquivo .html
+    with io.open(name, 'w', encoding='utf-8') as file:
+        file.write(content)
+    file.close()
 
-def sendMail():
+def sendMail(mensagem):
     try:
         # Criando mensagem de e-mail
         msg = MIMEMultipart()
         msg['From'] = 'igor.o.crisostomo@gmail.com'
-        msg['To'] = 'igor.oliveira@ufvjm.edu.br'
-        msg['Subject'] = 'Assunto do E-mail'
+        msg['To'] = 'igor.o.crisostomo@gmail.com'
+        msg['Subject'] = 'Página atualizada'
 
         # Configuração do servidor SMTP
         server = smtplib.SMTP('smtp.gmail.com', 587)
         server.starttls()
-        server.login(msg['From'], 'gmksbiwlicyvhdgi')
+        server.login(msg['From'], 'ltnrnhqeiqruynsg')
 
         # Adicionando conteúdo ao e-mail
-        mensagem = 'Olá, isso é um exemplo de e-mail enviado com Python.'
-        msg.attach(MIMEText(mensagem, 'plain'))
+        #mensagem = 'Olá, isso é um exemplo de e-mail enviado com Python.'
+        msg.attach(MIMEText(mensagem, 'html'))
 
         # Enviando e-mail
         texto = msg.as_string()
@@ -106,6 +115,8 @@ def sendMail():
     except TimeoutError:
         gravaLog("Ocorreu um erro de timeout ao tentar conectar com o servidor SMTP para enviar o e-mail de notificação.\nEste pode ser:\na) Um problema de comunicação com servidor; ou\nb)Regra de firewall da rede que este APP está conectado.")
 
+
+   
 def gravaLog(msg):
     print(msg)
 
